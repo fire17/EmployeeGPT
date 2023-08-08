@@ -1,0 +1,31 @@
+
+1: Regular Ace Beer
+Price: $5.50
+
+2: Fancy Ace Beer
+Price: $14.99
+
+3: Coctail
+Price: $10.00
+Options: Gin, Arak, Vodka,
+flavors: Palmgranade, Oranges, Lime, Watermelon
+
+4: Shot
+Options: Gin, Arak, Vodka,
+Price: $3.00
+
+5. Fries
+Size: 400g
+Price: $8.00
+
+6. Icecream (2 scoops)
+Price: $7.00
+flavors: Vanilla, Oreos, Palmgranade, Oranges, Lime, Watermelon
+
+6. Pizza (ExtraLarge)
+Price: $10.00
+available toppings: garlic, tomattos, pineapple, Onions, grapes, Extra Cheese ($2 dollar each topping or $1 for half topping)
+optional: Vegan Cheese instead
+
+
+

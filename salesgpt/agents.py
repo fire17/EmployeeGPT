@@ -16,6 +16,9 @@ from salesgpt.stages import CONVERSATION_STAGES
 from salesgpt.templates import CustomPromptTemplateForTools
 from salesgpt.tools import get_tools, setup_knowledge_base
 
+Tool_master = True
+
+
 
 class SalesGPT(Chain, BaseModel):
     """Controller model for the Sales Agent."""
@@ -160,7 +163,7 @@ class SalesGPT(Chain, BaseModel):
 
         # Generate agent's utterance
         # if use tools
-        if False and self.use_tools:
+        if Tool_master and self.use_tools:
             ai_message = self.sales_agent_executor.run(
                 input="",
                 conversation_stage=self.current_conversation_stage,
@@ -189,6 +192,7 @@ class SalesGPT(Chain, BaseModel):
             )
 
         # Add agent's response to conversation history
+        raw_output = ai_message
         agent_name = self.salesperson_name
         ai_message = agent_name + ": " + ai_message
         if '<END_OF_TURN>' not in ai_message:
@@ -207,6 +211,7 @@ class SalesGPT(Chain, BaseModel):
         if (
             "use_custom_prompt" in kwargs.keys()
             and kwargs["use_custom_prompt"] == "True"
+            and False
         ):
             use_custom_prompt = deepcopy(kwargs["use_custom_prompt"])
             custom_prompt = deepcopy(kwargs["custom_prompt"])
@@ -227,15 +232,17 @@ class SalesGPT(Chain, BaseModel):
                 llm, verbose=verbose
             )
 
-        if False and ("use_tools" in kwargs.keys() and kwargs["use_tools"] is True):
+        if Tool_master and ("use_tools" in kwargs.keys() and kwargs["use_tools"] is True):
             # set up agent with tools
-            product_catalog = kwargs["product_catalog"]
-            class customKBase:
-                def run(*args, **kwargs):
-                    print("################# ############ #### # # # #  # # CUSTOM KNOLEGE BASE",args,kwargs)
-                    return kwargs
-            # knowledge_base = setup_knowledge_base(product_catalog)
-            knowledge_base = customKBase
+            menu = kwargs["menu"] if "menu" in kwargs else ""
+            salesperson_name = kwargs["salesperson_name"] if "salesperson_name" in kwargs else "Dani" 
+            # class customKBase(BaseModel):
+            #     def run(*args, **kwargs) -> Dict:
+            #         print("################# ############ #### # # # #  # # CUSTOM KNOLEGE BASE",args,kwargs)
+            #         return {**kwargs,**{"retriever":Dict.__new__({})}}
+            knowledge_base = setup_knowledge_base(menu)
+            # knowledge_base = setup_knowledge_base("product_catalog")
+            # knowledge_base: Dict = customKBase.run()
             tools = get_tools(knowledge_base)
 
             prompt = CustomPromptTemplateForTools(
@@ -262,7 +269,7 @@ class SalesGPT(Chain, BaseModel):
 
             # WARNING: this output parser is NOT reliable yet
             ## It makes assumptions about output from LLM which can break and throw an error
-            output_parser = SalesConvoOutputParser(ai_prefix=kwargs["salesperson_name"])
+            output_parser = SalesConvoOutputParser(ai_prefix=salesperson_name)
 
             sales_agent_with_tools = LLMSingleActionAgent(
                 llm_chain=llm_chain,

@@ -11,6 +11,7 @@ from langchain.chat_models import ChatOpenAI
 from xo.redis import xoRedis
 
 xo = xoRedis("test.engineergpt")
+Tool_master = True
 
 def processAIStep(msg, agent:SalesGPT):
     print(" ::: Processing Events")
@@ -24,10 +25,11 @@ def processAIStep(msg, agent:SalesGPT):
         print(f"Stage {stage_id} - {stage_name}")
         print("$"*10)
         
-        def welcome_returning(manager_msg="[This is a returning customer, his last delivery address was 123 Ox st] (AUTOMATIC)",*a, **kw):
+        def welcome_returning(manager_msg="[This is a returning customer, their name is Tami, address them by their name. Their last preferred delivery address was 123 Ox st. Their last order was 2 Ace Beers and 2 Shots of arak] (AUTOMATIC)",*a, **kw):
             print(" @@@ Adding Returning Client's Info @@@ !!!!!!!!! (AUTOMATIC)")
             print(manager_msg)
             # xo.step.manager = "[This is a returning customer, his last delivery address was 123 Ox st]"
+            # agent.manager_step("<STAGE-0:init>")
             agent.manager_step(manager_msg)
         def send_bon(manager_msg = "[Sending payment link to customer] (AUTOMATIC)",
                      manager_msg2 = "[*Payment Successful*] (AUTOMATIC)", *a, **kw):
@@ -42,7 +44,7 @@ def processAIStep(msg, agent:SalesGPT):
         def add_to_cart(*args, **kwargs):
             print(" @@@ UPDATING CART @@@ ")
         
-        triggered_events = {"1":welcome_returning,"2":add_to_cart,"3":send_bon}
+        triggered_events = {"0":welcome_returning,"2":add_to_cart,"3":send_bon}
         if stage_id in triggered_events:
             triggered_events[stage_id]()
         else:
@@ -80,12 +82,12 @@ if __name__ == "__main__":
         USE_TOOLS=False
         if USE_TOOLS:
             sales_agent = SalesGPT.from_llm(llm, use_tools=True, 
-                                    product_catalog = "examples/sample_product_catalog.txt",
+                                    menu = "menu.txt",
                                     salesperson_name="Ted Lasso",
                                     verbose=verbose)
         else:
             print("---BON EMPLOYEE---")
-            sales_agent = SalesGPT.from_llm(llm, verbose=verbose)
+            sales_agent = SalesGPT.from_llm(llm, use_tools=Tool_master, verbose=verbose, menu = "menu.txt",)
     else:
         with open(config_path,'r') as f:
             config = json.load(f)
@@ -130,6 +132,7 @@ if __name__ == "__main__":
 
     print('='*10)
     cnt = 0
+    processAIStep("System: <STAGE:0-init>\n", agent=sales_agent)
     while cnt !=max_num_turns:
         cnt+=1
         if cnt==max_num_turns:
