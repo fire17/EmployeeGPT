@@ -29,9 +29,17 @@ def setup_knowledge_base(product_catalog: str = None):
     return knowledge_base
 
 
+def EventTool(*args, **kwargs):
+    print("@@@@@@@@@@!!!!!!!!!!!!!!!!!! EVENT TOOL!!!", args, kwargs)
+
 def get_tools(knowledge_base):
     # we only use one tool for now, but this is highly extensible!
     tools = [
+        # Tool(
+        #     name="EventTool",
+        #     func=EventTool,
+        #     description="Use when a converstation stage is changed",
+        # ),
         Tool(
             name="ProductSearch",
             func=knowledge_base.run,
@@ -40,3 +48,7 @@ def get_tools(knowledge_base):
     ]
 
     return tools
+'''
+TODO: Add more CUSTOM tools, call my own functions
+Changes: Tool: System Events
+'''

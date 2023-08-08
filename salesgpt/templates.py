@@ -29,3 +29,9 @@ class CustomPromptTemplateForTools(StringPromptTemplate):
         # Create a list of tool names for the tools provided
         kwargs["tool_names"] = ", ".join([tool.name for tool in tools])
         return self.template.format(**kwargs)
+
+
+'''
+TODO: Undestand where this is used and the benefits of editing this (if any)
+Changes: 
+'''

@@ -2,7 +2,7 @@ import pytest
 import os
 from langchain.chat_models import ChatOpenAI
 
-from salesgpt.agents import SalesGPT
+from salesgpt.agents import EmployeeGPT
 
 
 class TestSalesGPT:
@@ -12,7 +12,7 @@ class TestSalesGPT:
 
         llm = ChatOpenAI(temperature=0.9)
 
-        sales_agent = SalesGPT.from_llm(
+        sales_agent = EmployeeGPT.from_llm(
             llm,
             verbose=False,
             use_tools=False,
@@ -48,7 +48,7 @@ class TestSalesGPT:
 
         data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data")
 
-        sales_agent = SalesGPT.from_llm(
+        sales_agent = EmployeeGPT.from_llm(
             llm,
             verbose=False,
             use_tools=True,
@@ -83,7 +83,7 @@ class TestSalesGPT:
         llm = ChatOpenAI(temperature=0.9)
         model_name = 'gpt-3.5-turbo'
 
-        sales_agent = SalesGPT.from_llm(
+        sales_agent = EmployeeGPT.from_llm(
             llm,
             verbose=False,
             salesperson_name="Ted Lasso",

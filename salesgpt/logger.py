@@ -38,3 +38,9 @@ def time_logger(func):
         return result
 
     return wrapper
+
+
+'''
+TODO: use logger as embeddings for future convestation for a returning client
+Changes: client can order the same thing as before (quick order) with additional changes
+'''

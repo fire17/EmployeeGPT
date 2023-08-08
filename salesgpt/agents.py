@@ -30,12 +30,14 @@ class SalesGPT(Chain, BaseModel):
     conversation_stage_dict: Dict = CONVERSATION_STAGES
 
     use_tools: bool = False
-    salesperson_name: str = "Ted Lasso"
-    salesperson_role: str = "Business Development Representative"
-    company_name: str = "Sleep Haven"
-    company_business: str = "Sleep Haven is a premium mattress company that provides customers with the most comfortable and supportive sleeping experience possible. We offer a range of high-quality mattresses, pillows, and bedding accessories that are designed to meet the unique needs of our customers."
-    company_values: str = "Our mission at Sleep Haven is to help people achieve a better night's sleep by providing them with the best possible sleep solutions. We believe that quality sleep is essential to overall health and well-being, and we are committed to helping our customers achieve optimal sleep by offering exceptional products and customer service."
-    conversation_purpose: str = "find out whether they are looking to achieve better sleep via buying a premier mattress."
+    salesperson_name: str = "Ace"
+    # salesperson_role: str = "Business Development Representative"
+    salesperson_role: str = "Business Employee"
+    company_name: str = "Ace's Beers"
+    company_business: str = "We have a family owned shop in Arsuf, and we make the best beers around."
+    # company_values: str = "Our mission at Sleep Haven is to help people achieve a better night's sleep by providing them with the best possible sleep solutions. We believe that quality sleep is essential to overall health and well-being, and we are committed to helping our customers achieve optimal sleep by offering exceptional products and customer service."
+    company_values: str = "We are here 24/7 to deliver you beer right to your doorstep. We sell our beers as well as other providers at low cost."
+    conversation_purpose: str = "Ask them what they would like to order, and answer any questions they have."
     conversation_type: str = "call"
 
     def retrieve_conversation_stage(self, key):
@@ -77,8 +79,18 @@ class SalesGPT(Chain, BaseModel):
 
     def human_step(self, human_input):
         # process human input
-        human_input = "User: " + human_input + " <END_OF_TURN>"
+        human_input = "Customer: " + human_input + " <END_OF_TURN>"
         self.conversation_history.append(human_input)
+
+    def manager_step(self, human_input):
+        # process human input
+        human_input = "Manager: " + human_input + " <END_OF_TURN>"
+        self.conversation_history.append(human_input)
+
+    def System_step(self, system_input):
+        # process system input
+        system_input = "System: " + system_input + " <END_OF_TURN>"
+        self.conversation_history.append(system_input)
 
     @time_logger
     def step(
@@ -90,7 +102,7 @@ class SalesGPT(Chain, BaseModel):
             streaming generator object to manipulate streaming chunks in downstream applications.
         """
         if not return_streaming_generator:
-            self._call(inputs={})
+            return self._call(inputs={})
         else:
             return self._streaming_generator(model_name=model_name)
 
@@ -148,7 +160,7 @@ class SalesGPT(Chain, BaseModel):
 
         # Generate agent's utterance
         # if use tools
-        if self.use_tools:
+        if False and self.use_tools:
             ai_message = self.sales_agent_executor.run(
                 input="",
                 conversation_stage=self.current_conversation_stage,
@@ -181,9 +193,11 @@ class SalesGPT(Chain, BaseModel):
         ai_message = agent_name + ": " + ai_message
         if '<END_OF_TURN>' not in ai_message:
             ai_message += ' <END_OF_TURN>'
+        #TODO: check for <EVENTS> in ai_message + add them to ai_message / conversation_history
         self.conversation_history.append(ai_message)
         print(ai_message.replace("<END_OF_TURN>", ""))
-        return {}
+        #TODO: Send results back to client, after event filter, 
+        return ai_message
 
     @classmethod
     @time_logger
@@ -213,10 +227,15 @@ class SalesGPT(Chain, BaseModel):
                 llm, verbose=verbose
             )
 
-        if "use_tools" in kwargs.keys() and kwargs["use_tools"] is True:
+        if False and ("use_tools" in kwargs.keys() and kwargs["use_tools"] is True):
             # set up agent with tools
             product_catalog = kwargs["product_catalog"]
-            knowledge_base = setup_knowledge_base(product_catalog)
+            class customKBase:
+                def run(*args, **kwargs):
+                    print("################# ############ #### # # # #  # # CUSTOM KNOLEGE BASE",args,kwargs)
+                    return kwargs
+            # knowledge_base = setup_knowledge_base(product_catalog)
+            knowledge_base = customKBase
             tools = get_tools(knowledge_base)
 
             prompt = CustomPromptTemplateForTools(
@@ -262,8 +281,13 @@ class SalesGPT(Chain, BaseModel):
         return cls(
             stage_analyzer_chain=stage_analyzer_chain,
             sales_conversation_utterance_chain=sales_conversation_utterance_chain,
-            sales_agent_executor=sales_agent_executor,
+            sales_agent_executor=sales_agent_executor, # Default when using tools
             knowledge_base=knowledge_base,
             verbose=verbose,
             **kwargs,
         )
+
+'''
+TODO: This is where the meat setup is
+Changes: changed salesman to Ace beer (bon) employee
+'''
