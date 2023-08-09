@@ -19,7 +19,8 @@ logger.addFilter(TimeFilter())
 
 # Configure the logging module
 logging.basicConfig(
-    level=logging.INFO,
+    # level=logging.INFO,
+    level=logging.ERROR,
     format="%(name)s %(asctime)s - %(levelname)s - %(message)s",
     handlers=handlers,
 )

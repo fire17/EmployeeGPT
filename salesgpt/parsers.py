@@ -11,10 +11,12 @@ class SalesConvoOutputParser(AgentOutputParser):
     verbose: bool = False
 
     def get_format_instructions(self) -> str:
+        print(f" XXX {FORMAT_INSTRUCTIONS} XXX")
         return FORMAT_INSTRUCTIONS
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
-        if self.verbose:
+        print("@@@@@@@@@@@@@@@@@@@ PARSING @@@@@@@@@@@@@@@@@@@@@@@")
+        if self.verbose or True:
             print("TEXT")
             print(text)
             print("-------")

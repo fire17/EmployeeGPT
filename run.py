@@ -4,51 +4,64 @@ import os
 import json
 import time
 
-from salesgpt.agents import SalesGPT
+from salesgpt.agents import SalesGPT, Tool_master
 from langchain.chat_models import ChatOpenAI
 
 
 from xo.redis import xoRedis
 
 xo = xoRedis("test.engineergpt")
-Tool_master = True
+# Tool_master = False
+debug_master=False
 
 def processAIStep(msg, agent:SalesGPT):
-    print(" ::: Processing Events")
+    if debug_master:print(" ::: Processing Events")
     # print(msg)
     event_detected = "<STAGE" in msg.split("\n")[0]
     if event_detected:
         event = ":".join(msg.split("\n")[0].split(":")[1:])
-        print("$"*10)
+        if debug_master:print("$"*10)
         stage_id = event.split(":")[1].split("-")[0].strip()
         stage_name = event.split("-")[1].split(">")[0].strip()
-        print(f"Stage {stage_id} - {stage_name}")
-        print("$"*10)
+        if debug_master:print(f"Stage {stage_id} - {stage_name}")
+        if debug_master:print("$"*10)
         
         def welcome_returning(manager_msg="[This is a returning customer, their name is Tami, address them by their name. Their last preferred delivery address was 123 Ox st. Their last order was 2 Ace Beers and 2 Shots of arak] (AUTOMATIC)",*a, **kw):
-            print(" @@@ Adding Returning Client's Info @@@ !!!!!!!!! (AUTOMATIC)")
-            print(manager_msg)
+            if debug_master:print(" @@@ Adding Returning Client's Info @@@ !!!!!!!!! (AUTOMATIC)")
+            # print(manager_msg)
+            print("\033[90m" + manager_msg + "\033[0m")
             # xo.step.manager = "[This is a returning customer, his last delivery address was 123 Ox st]"
             # agent.manager_step("<STAGE-0:init>")
             agent.manager_step(manager_msg)
         def send_bon(manager_msg = "[Sending payment link to customer] (AUTOMATIC)",
                      manager_msg2 = "[*Payment Successful*] (AUTOMATIC)", *a, **kw):
             
-            print(" @@@ GENERATING & SENDING BON @@@")
-            print(manager_msg)
-            print(manager_msg2)
+            line = " @@@ GENERATING & SENDING BON @@@"
+            print("\033[92m" + line + "\033[0m")
+            print("\033[92m" + manager_msg + "\033[0m")
+            print("\033[92m" + manager_msg2 + "\033[0m")
+            # print(manager_msg)
+            # print(manager_msg2)
             # xo.step.manager = "[PAYMENT LINK SENT TO CLIENT !!!!!!!!! (AUTOMATIC) ] "
             agent.manager_step(manager_msg)
             agent.manager_step(manager_msg2)
+            print("\033[90m" + "[Continue]" + "\033[0m")
+            agent.step()
         # print("::::::::::::: SUBS:",xo.step.manager._subscribers)
+        def await_manager():
+            print("\033[90m" + "[Awaiting Managers to Approve The Order]" + "\033[0m")
+
+    
         def add_to_cart(*args, **kwargs):
-            print(" @@@ UPDATING CART @@@ ")
+            line = " @@@ UPDATING CART @@@ "
+            print("\033[92m" + line + "\033[0m")
+
         
-        triggered_events = {"0":welcome_returning,"2":add_to_cart,"3":send_bon}
+        triggered_events = {"0":welcome_returning,"2":add_to_cart,"3":send_bon, "5":await_manager}
         if stage_id in triggered_events:
             triggered_events[stage_id]()
         else:
-            print(f"----------STAGE{stage_id} not in {triggered_events}")
+            if debug_master:print(f"----------STAGE{stage_id} not in {triggered_events}")
    
 
 if __name__ == "__main__":
@@ -64,7 +77,7 @@ if __name__ == "__main__":
 
     # Add arguments
     parser.add_argument('--config', type=str, help='Path to agent config file', default='')
-    parser.add_argument('--verbose', type=bool, help='Verbosity', default=True)
+    parser.add_argument('--verbose', type=bool, help='Verbosity', default=False)
     parser.add_argument('--max_num_turns', type=int, help='Maximum number of turns in the sales conversation', default=20)
 
     # Parse arguments
@@ -97,7 +110,8 @@ if __name__ == "__main__":
 
     sales_agent.seed_agent()
 
-    def step(human_input, role="manager"):
+    def takeStep(human_input, role="manager"):
+        print("\033[90m" + f"[{role}:{human_input}]" + "\033[0m")
         if role == "manager":
             sales_agent.manager_step(human_input)
         if role == "user":
@@ -108,9 +122,9 @@ if __name__ == "__main__":
     
     def stepWrapper(i,*a, **kw):
         role="manager" if "role" not in kw else kw["role"]
-        print("@@@@@@@@@@@@@@ STEPPING @@@@@@@@@@@@@@", i,":", a,":", kw)
+        if debug_master: print("@@@@@@@@@@@@@@ STEPPING @@@@@@@@@@@@@@", i,":", a,":", kw)
         if i != None and i!=-1:
-            return step(i, role=role)
+            return takeStep(i, role=role)
         return None
 
     xo.step.manager = -1

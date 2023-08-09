@@ -16,7 +16,7 @@ from salesgpt.stages import CONVERSATION_STAGES
 from salesgpt.templates import CustomPromptTemplateForTools
 from salesgpt.tools import get_tools, setup_knowledge_base
 
-Tool_master = True
+Tool_master = False
 
 
 
@@ -199,9 +199,21 @@ class SalesGPT(Chain, BaseModel):
             ai_message += ' <END_OF_TURN>'
         #TODO: check for <EVENTS> in ai_message + add them to ai_message / conversation_history
         self.conversation_history.append(ai_message)
-        print(ai_message.replace("<END_OF_TURN>", ""))
+        SalesGPT.pretty(ai_message.replace("<END_OF_TURN>", ""))
         #TODO: Send results back to client, after event filter, 
         return ai_message
+    
+    @classmethod
+    def pretty(cls, ai_message):
+        for line in ai_message.split('\n'):
+            if "<" in ":".join(line.split(":")[1:]).strip()[:1]:
+                if "<STAGE" in line:
+                    print("\033[93m" + line + "\033[0m")
+                else:
+                    print("\033[92m" + line + "\033[0m")
+            else:
+                print(line)
+
 
     @classmethod
     @time_logger
@@ -274,7 +286,8 @@ class SalesGPT(Chain, BaseModel):
             sales_agent_with_tools = LLMSingleActionAgent(
                 llm_chain=llm_chain,
                 output_parser=output_parser,
-                stop=["\nObservation:"],
+                # stop=["\nObservation:"],
+                stop=["\nThought: Do"],
                 allowed_tools=tool_names,
             )
 
