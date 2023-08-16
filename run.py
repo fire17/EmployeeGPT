@@ -11,7 +11,7 @@ from langchain.chat_models import ChatOpenAI
 from xo.redis import xoRedis
 
 xo = xoRedis("test.engineergpt")
-# Tool_master = False
+# Tool_master = False   
 debug_master=False
 
 def processAIStep(msg, agent:SalesGPT):
@@ -26,7 +26,7 @@ def processAIStep(msg, agent:SalesGPT):
         if debug_master:print(f"Stage {stage_id} - {stage_name}")
         if debug_master:print("$"*10)
         
-        def welcome_returning(manager_msg="[This is a returning customer, their name is Tami, address them by their name. Their last preferred delivery address was 123 Ox st. Their last order was 2 Ace Beers and 2 Shots of arak] (AUTOMATIC)",*a, **kw):
+        def welcome_returning(manager_msg="[This is a returning customer, their name is Tami, address them by their name. Their last preferred delivery address was 123 Ox st (home). Their last order was 2 Ace Beers and 2 Shots of arak] (AUTOMATIC)",*a, **kw):
             if debug_master:print(" @@@ Adding Returning Client's Info @@@ !!!!!!!!! (AUTOMATIC)")
             # print(manager_msg)
             print("\033[90m" + manager_msg + "\033[0m")
@@ -127,6 +127,7 @@ if __name__ == "__main__":
             return takeStep(i, role=role)
         return None
 
+    xo.step = -1
     xo.step.manager = -1
     xo.step.user = -1
     xo.step.agent = -1
@@ -136,9 +137,11 @@ if __name__ == "__main__":
     #         xobj[t] = -1
     # resetTriggers(xo.step)
     
+    xo.step._subscribers.clear()
     xo.step.manager._subscribers.clear()
     xo.step.user._subscribers.clear()
     xo.step.agent._subscribers.clear()
+    xo.step @= lambda x, *a, **kw: stepWrapper(x,role="manager",*a,**kw)
     xo.step.manager @= lambda x, *a, **kw: stepWrapper(x,role="manager",*a,**kw)
     xo.step.user @= lambda x, *a, **kw: stepWrapper(x,role="user",*a,**kw)
     xo.step.agent @= lambda x, *a, **kw: stepWrapper(x,role="agent",*a,**kw)
@@ -162,8 +165,14 @@ if __name__ == "__main__":
             break
 
         
-
-        human_input = input('Your response: ')
+        
+        human_input = ""
+        c = 0
+        while human_input =="":
+            human_input = input('Your response: ')
+            if c>1:
+                print("<empty input ignored>")
+            c+=1
         sales_agent.human_step(human_input)
         print('='*10)
 

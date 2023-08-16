@@ -23,25 +23,30 @@ Tool_master = False
 class SalesGPT(Chain, BaseModel):
     """Controller model for the Sales Agent."""
 
+    #Mandatory
     conversation_history: List[str] = []
-    conversation_stage_id: str = "1"
-    current_conversation_stage: str = CONVERSATION_STAGES.get("1")
+    #Config
+    use_tools: bool = False
     stage_analyzer_chain: StageAnalyzerChain = Field(...)
     sales_agent_executor: Union[AgentExecutor, None] = Field(...)
     knowledge_base: Union[RetrievalQA, None] = Field(...)
     sales_conversation_utterance_chain: SalesConversationChain = Field(...)
-    conversation_stage_dict: Dict = CONVERSATION_STAGES
 
-    use_tools: bool = False
+    #Dynamic
+    conversation_stage_id: str = "1"
+    conversation_stage_dict: Dict = CONVERSATION_STAGES
+    current_conversation_stage: str = CONVERSATION_STAGES.get("1")
+    #Static
     salesperson_name: str = "Ace"
-    # salesperson_role: str = "Business Development Representative"
     salesperson_role: str = "Business Employee"
     company_name: str = "Ace's Beers"
     company_business: str = "We have a family owned shop in Arsuf, and we make the best beers around."
-    # company_values: str = "Our mission at Sleep Haven is to help people achieve a better night's sleep by providing them with the best possible sleep solutions. We believe that quality sleep is essential to overall health and well-being, and we are committed to helping our customers achieve optimal sleep by offering exceptional products and customer service."
     company_values: str = "We are here 24/7 to deliver you beer right to your doorstep. We sell our beers as well as other providers at low cost."
     conversation_purpose: str = "Ask them what they would like to order, and answer any questions they have."
     conversation_type: str = "call"
+    # salesperson_role: str = "Business Development Representative"
+    # company_values: str = "Our mission at Sleep Haven is to help people achieve a better night's sleep by providing them with the best possible sleep solutions. We believe that quality sleep is essential to overall health and well-being, and we are committed to helping our customers achieve optimal sleep by offering exceptional products and customer service."
+
 
     def retrieve_conversation_stage(self, key):
         return self.conversation_stage_dict.get(key, "1")
