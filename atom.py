@@ -286,10 +286,10 @@ You must provide data value for each key in the dict
                 # print(x)
                 normal_dict = json.loads(x.strip("$$$").replace("<END_OF_TURN>",""))
 # json.loads(data.decode("utf-8"))
-            print("&&&&&&&&&&&&&&&&&&&")
-            print("&&&&&&&&&&&&&&&&&&&")
-            print("&&&&&&&&&&&&&&&&&&&",normal_dict["thoughts_function_calls"] if "thoughts_function_calls" in normal_dict else "XXX")
-            print("&&&&&&&&&&&&&&&&&&&")
+            # print("&&&&&&&&&&&&&&&&&&&")
+            # print("&&&&&&&&&&&&&&&&&&&")
+            # print("&&&&&&&&&&&&&&&&&&&",normal_dict["thoughts_function_calls"] if "thoughts_function_calls" in normal_dict else "XXX")
+            # print("&&&&&&&&&&&&&&&&&&&")
             # pp(normal_dict)
             if "triggers" in self and can_trigger and (iteration==0 or "thoughts_function_calls" in normal_dict and normal_dict["thoughts_function_calls"]==True):
                 for key in self["triggers"]:
