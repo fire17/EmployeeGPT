@@ -2,7 +2,7 @@ import json
 import traceback
 from atom import Worker
 
-def process_detection(response: dict):
+def process_lang_detection(response: dict, *args, **kwargs):
     try:
         if "language_detected" in response:
             if True or "confidence" in response and float(response["confidence"]) > 0.7:
@@ -13,6 +13,36 @@ def process_detection(response: dict):
         else:
             response["results"] = None
             response["error"] = "Language not detected"
+                # response["response"] = response["language_detected"]
+                # return response["language_detected"]
+    except:
+            print("XX ERROR PROCESSING RESULTS")
+            traceback.print_exc()    
+    return None
+def process_cart(response: dict, *args, **kwargs):
+    try:
+        print("##############$$$$$$$$$$$$$")
+        self = kwargs["self"] if "self" in kwargs else {}
+        if "new_data" in response and "cart_update_tool" in response["new_data"]:
+                msg = ""
+                if "details" in response["new_data"]["cart_update_tool"]:
+                    msg += "Saved Details, "
+                    for k in response["new_data"]["cart_update_tool"]["details"]:
+                         print("!!! DETAILS !!!", k, response["new_data"]["cart_update_tool"]["details"][k])
+                    self["details"].update(response["new_data"]["cart_update_tool"]["details"])
+                    # print("!!! DETAILS FINAL !!!", self["details"])
+                if "updates" in response["new_data"]["cart_update_tool"]:
+                    msg += "Saved Updates, "
+                    for k in response["new_data"]["cart_update_tool"]["updates"]:
+                         print("!!! UPDATES !!!", k)
+                         self["cart"].append(k)
+                
+                response["tool_res"] = msg
+
+                
+        else:
+            response["tool_res"] = None
+            # response["error"] = "Language not detected"
                 # response["response"] = response["language_detected"]
                 # return response["language_detected"]
     except:
@@ -423,6 +453,10 @@ You must provide data value for each key in the dict
 
 
 
+"""
+=== Notes ===
+When customers ask for "2 of something, one x one y", if the items are in the same category "something" make sure to just add 1 x and one y (2 items total, not 4 items total). Dont make such mistakes and avoid unnecessary duplications in the cart.
+"""
 
 
 employee_with_tools2 = '''{objective}
@@ -436,6 +470,7 @@ Always answer with a dict format.
         "thoughts":(
             "use_tools":<bool, Always write yes if one or more of the tools is needed>
         ),
+    "missing_details":<List<str> of the next required details you need to find out from the conversation>
     "stage":<str or List<str> of Current Stage, or List of Stages. ALWAYS Include FULL Tag Information, Name and Data>
     "new_data":(<name_of_tool>:<input or params to the tool's function>, ) #for each tool
     "response":<str or Markdown, The final response to the user must not be empty, always answer in {default}>,
@@ -453,12 +488,9 @@ You are being contacted by potential customer in order to. {conversation_purpose
 Your means of contacting the prospect is {conversation_type}, Always address them by their names when greeting (if their name is available)
 Aim to resolve issues and leave client satisfied while not violating the company's protocols.
 
-=== Notes ===
-When customers ask for "2 of something, one x one y", if the items are in the same category "something" make sure to just add 1 x and one y (2 items total, not 4 items total). Dont make such mistakes and avoid unnecessary duplications in the cart.
-
 
 === STAGES ===
-1: Introduction:  Start with a greeting, introducing yourself and your company/business, address their name if available. Ask them what they would like to order. Be polite and respectful while keeping the tone of the conversation professional. Your greeting should be welcoming. 
+1: Introduction:  Start with a greeting, introducing yourself and your company/business, address their name if available. Rember to ask them what they would like to order. Be polite and respectful while keeping the tone of the conversation professional. Your greeting should be welcoming. 
 2: Take Order Details with Tags: Make updates to the cart using data tags <CART:...> or  <DETAILS:...> - Do this only once per item. Answer any questions they have if they asked. If needed based on the item, ask them to choose from the item variations - like flavors, and relevant details that are not obvious by default item. Finally, ask them if there's anything else they'll like to order, when they answer "no" (meaning they are done with the order items) go to the next STAGE and make the bon. .
 3: Order Summary & Generate Bon: Only once client has said that they don't want anything else to order. First, Send the client his cart AS A LIST INCLUDING PRICES AND HIGHLIGHT THE TOTAL FINAL COST. Only then, Turn the client cart into a bon, send the client a secure payment link with the cart details.
 4: Awaiting Payment: You can answer any questions the user has, while we wait for payment, if any changes they to the cart/order, go to STAGE 3 .
@@ -496,24 +528,30 @@ if the user has yet to write something (from conversation history) start STAGE 1
 - "search":("description":"Useful for when you need to search for something online, to fetch information", "params":("search_query":"A useful search query based on the context")) 
 - "calculator":("description":"Use for any kind of math", "params":("line":"a mathematical line that can be run in python"))
 
-ORDER DETAILS (must be set or present in order details before sending bon, ask for customer if missing):
-- PickupOrDelivery: must be known, infer by the input
-- pickup_time: must be known if PickupOrDelivery is "Pickup"
-- address: must be known if PickupOrDelivery is "Delivery", infer by the input or history
-- phone: ask from the customer if not already available
-- delivery_notes: optional, if the customer said anything that should be included upon delivery
+ADDITIONAL REQUIRED ORDER DETAILS: phone,
+OPTIONAL ORDER DETAILS: delivery_notes,
 ALL Order Details you inferred Must be in cart_update_tool["details"], such as PickupOrDelivery, address, phone number, etc, always include all details derived from the input
 
 CART_UPDATE_TOOL FORMAT FOR ORDER DETAILS AND ITEMS:
 "cart_update_tool":( 
     "details":<dict of all order details inferred>,
-    "updates":[ ("operation":"add", "item_id":<item's id from the inventory/menu>, "ammount":<item_ammount>, "notes":<notes about item if any>, "parent":<dont include for items this is the index of parent item and relevant only for subitems>),
+    "updates":[ ("operation":"add", "item_id":<item's id from the inventory/menu>, "ammount":<item_ammount>, "notes":<notes about item if any>, "parent":<exclude if not a subitem>),
     ("operation":"update", "item_at":<item's index in the current cart, can be subitem at index item_index.subitem_index>, "ammount":<can be same, changed, or 0 to remove>", "notes":<include if need to change notes>"),]
 )
 
+Always Think ahead and predict what is the next thing you will need in order to proceed faster.
+Rember to Always use "comprised" useful questions like - "is there anything else you'd like? if not, then please provide..." <all of the missing details required> 
+Remember to ALWAYS ask if there's anything else they'd like to order! Always ask this first and details later
+[Order details - ask them for the [missing] details, always use a "comprised" questions]
+{details}
+
+[Current Cart]
+{cart}
+
+
 You must provide data value for each key in the dict
 
-[Convesation History - minimized to show only dict["employee"] ]
+[Convesation History - minimized ]
 {conversation}
 
 [Do not answer directly, just fill the dict appropriately]
@@ -525,9 +563,11 @@ You must provide data value for each key in the dict
 
 # objective="You are an expert in all languages. The user will give you an input, and your job is to detect the language of the user, and then answer them normally."
 conversation1 = []
+details = {"PickupOrDeliver":"[missing]","address":"?","pickup_time":"?","phone":"[missing]","delivery_notes":"","customer_finished_ordering":False}
+cart = []
 # languageFinder = Worker(lang_detect_and_respond_with_tools2, objective=objective, conversation=conversation1, default="English", triggers={"language_detected":process_detection} )
 # languageFinder = Worker(employee_with_tools,prev_employee=employeePrompt, conversation=conversation1, default="English", triggers={"language_detected":process_detection} )
-languageFinder = Worker(employee_with_tools2, conversation=conversation1, default="English", triggers={"language_detected":process_detection}, **company_details )
+languageFinder = Worker(employee_with_tools2, details=details, cart = cart, conversation=conversation1, default="English", triggers={"language_detected":process_lang_detection, "new_data":process_cart}, **company_details )
 '''######### RUN EMPLOYEE CHAT ########'''
 # res1 = languageFinder.start_chat("Manager: [This is a returning customer, their name is Tami, address them by their name. Their last preferred delivery address was 123 Ox st (home). Their last order was 2 Ace Beers and 2 Shots of arak] (AUTOMATIC)", save_tag = "employee")
 res1 = languageFinder.start_chat("Manager: [This is a returning customer, their name is Tami, address them by their name. Their last preferred delivery address was 123 Ox st (home). Their last order was 2 Ace Beers and 2 Shots of arak] (AUTOMATIC)")
@@ -568,7 +608,7 @@ outputs = {
 conversation1 = []
 # conversation2 = []
 # languageFinder = Worker(lang_detect, conversation=conversation1, default="English", triggers={"language_detected":process_detection} )
-languageFinder = Worker(outputs, objective=objective, conversation=conversation1, default="English", triggers={"language_detected":process_detection} )
+languageFinder = Worker(outputs, objective=objective, conversation=conversation1, default="English", triggers={"language_detected":process_lang_detection} )
 # languageResponder = Worker(lang_detect_and_respond, conversation=conversation2, default="English", triggers={"language_detected":process_detection} )
 
 '''######### RUN ZEROSHOT 1 ########'''

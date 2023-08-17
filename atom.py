@@ -1,3 +1,4 @@
+from pprint import pprint as pp
 import traceback
 from xo.redis import xoRedis
 
@@ -48,6 +49,7 @@ print("xxx")
 
 
 from salesgpt.chains import employeePrompt as acePrompt
+verbose = False
 verbose = True
 def getVariables(txt=''''''):
     return ["foo","bar","conversation"]
@@ -126,7 +128,10 @@ class Worker(dict):
         self["objective"]="You are the most Capable Expert in any field, and you can determin the objective based on the structure of provided by the system below."
         for key in kwargs:
             self[key] = kwargs[key]
-        
+        self["function_results"] = []
+        # self["function_calls_org"] = "<bool, Do I need to call a function? DO NOT USE if History shows you just called that function>"
+        self["thought_function_calls_org"] = "<bool, Do I need to call a function? small letters for json>"
+        self["thought_function_calls"] = self["thought_function_calls_org"]
         if isinstance(template, dict):
             start_d = {"input":"<rewrite the user's input, or a shortend version with trailing dots...>",}
             final_d = {**start_d, **template, **{"response":"<The appropriate response thats appropriate to the protocol, do not leave empty>",}}
@@ -165,7 +170,7 @@ You must provide data value for each key in the dict
         self["_params"] = _params
 
     
-    def start_chat(self,incoming, save_tag=None, *args, **kwargs):
+    def start_chat(self,incoming=None, save_tag=None, *args, **kwargs):
         if incoming != None:
             incoming = incoming if len(incoming) > 0 else " "
             self["conversation"].append(incoming)
@@ -179,16 +184,16 @@ You must provide data value for each key in the dict
         # if '<END_OF_TURN>' not in ai_message_record:
         #     ai_message_record += ' <END_OF_TURN>'
         self["conversation"].append(ai_message_record)
-        print("@@@@@@@@@@",ai_message_record)
-        print("########## ai_message:",type(ai_message))
-        print("XXXXXXXXXXXXXxx")
-        print(raw_output)
-        print("XXXXXXXXXXXXXxx")
+        # print("@@@@@@@@@@",ai_message_record)
+        # print("########## ai_message:",type(ai_message))
+        # print("XXXXXXXXXXXXXxx")
+        # print(raw_output)
+        # print("XXXXXXXXXXXXXxx")
         if isinstance(ai_message, dict):
             if "response" in ai_message:
-                print("$$$$$$$$$", ai_message["response"])
+                pass # print("$$$$$$$$$", ai_message["response"])
             if "responses" in ai_message:
-                print("$$$$$$$$$", ai_message["responses"])
+                pass #  print("$$$$$$$$$", ai_message["responses"])
             return raw_output
         '''maybe retry a couple of times...?'''
         return ai_message_record
@@ -208,16 +213,16 @@ You must provide data value for each key in the dict
         # if '<END_OF_TURN>' not in ai_message_record:
         #     ai_message_record += ' <END_OF_TURN>'
         self["conversation"].append(ai_message_record)
-        print("@@@@@@@@@@ on record:",ai_message_record)
-        print("########## ai_message:",type(ai_message))
-        print("XXXXXXXXXXXXXxx")
-        print(raw_output)
-        print("XXXXXXXXXXXXXxx")
+        # print("@@@@@@@@@@ on record:",ai_message_record)
+        # print("########## ai_message:",type(ai_message))
+        # print("XXXXXXXXXXXXXxx")
+        # print(raw_output)
+        # print("XXXXXXXXXXXXXxx")
         if isinstance(ai_message, dict):
             if "response" in ai_message:
-                print("$$$$$$$$$", ai_message["response"])
+                pass # print("$$$$$$$$$", ai_message["response"])
             if "responses" in ai_message:
-                print("$$$$$$$$$", ai_message["responses"])
+                pass # print("$$$$$$$$$", ai_message["responses"])
             return raw_output
         '''maybe retry a couple of times...?'''
         return ai_message_record 
@@ -243,7 +248,7 @@ You must provide data value for each key in the dict
         conversation.append(ai_message)
         print("@@@@@@@@@@",ai_message)
 
-    def run(self):
+    def run(self, can_trigger = True, iteration = 0):
         prep_params = {}
         def process_param(p, v):
             if "conversation" == p:
@@ -281,8 +286,12 @@ You must provide data value for each key in the dict
                 # print(x)
                 normal_dict = json.loads(x.strip("$$$").replace("<END_OF_TURN>",""))
 # json.loads(data.decode("utf-8"))
-
-            if "triggers" in self:
+            print("&&&&&&&&&&&&&&&&&&&")
+            print("&&&&&&&&&&&&&&&&&&&")
+            print("&&&&&&&&&&&&&&&&&&&",normal_dict["thoughts_function_calls"] if "thoughts_function_calls" in normal_dict else "XXX")
+            print("&&&&&&&&&&&&&&&&&&&")
+            # pp(normal_dict)
+            if "triggers" in self and can_trigger and (iteration==0 or "thoughts_function_calls" in normal_dict and normal_dict["thoughts_function_calls"]==True):
                 for key in self["triggers"]:
                     if key in normal_dict:
             # if "triggers" in self:
@@ -292,18 +301,57 @@ You must provide data value for each key in the dict
             #                 if key in normal_dict[section]:
                         # print("FOUND TRIGGER!!!!!", key)
                         # trigger_res = self["triggers"][section][key](normal_dict[section])
-                        trigger_res = self["triggers"][key](normal_dict)
+                        trigger_res = self["triggers"][key](normal_dict, self=self)
+                        if not isinstance(trigger_res,list):
+                            trigger_res = [trigger_res]
                         if trigger_res != None:
                             # print("CONVERTED!!!!!!!!!!!", normal_dict)
-                            return trigger_res
+
+                            ''' # Call worker again if needed'''
+                            if "rerun" in self and self["rerun"]:
+                                self["rerun"] = False
+                                self["conversation"].append("Ace: "+str(normal_dict))
+                                for func_result in trigger_res:
+                                    self["function_results"].append(func_result)
+                                    
+                                    func = list(func_result.keys())[0]
+                                    # results = func_result["results"]
+                                    self["conversation"].append(f"[ Ace Called Function \"{func}\" Successfully ]")
+                                    # self["conversation"].append(f"[DO NOT RECALL {func}]")
+                                # self["conversation"].append(f"")
+                                '''place results in normal_dict for history record'''
+                                # pp(normal_dict)
+                                print("11111111111111111111")
+                                print("11111111111111111111")
+                                print("11111111111111111111")
+                                nextRun = self.run(can_trigger=True, iteration = iteration+1)
+                                print("%%%%%%%%%%%% NEXT RUN %%%%%%%%%%%%%%%%")
+                                pp(nextRun)
+                                print("%%%%%%%%%%%% END NEXT RUN %%%%%%%%%%%%%%%%")
+                                pp(normal_dict)
+                                print("%%%%%%%%%%%% END ORIGINAL %%%%%%%%%%%%%%%%")
+                                self["function_results"].clear()
+                                self["conversation"].pop()
+                                self["conversation"].pop()
+                                # self["conversation"].pop()
+
+                                return nextRun
+                            
+                            # return trigger_res
+                        
                         # if section in normal_dict and "response" in normal_dict[section] and normal_dict[section]["response"] != None:
                         if "response" in normal_dict and normal_dict["response"] != None:
                             # print(normal_dict[section]["response"])
                             # print(normal_dict["response"])
                             pass
                         # return normal_dict
+            else:
+                print("2222222222222222222")
+                print("2222222222222222222")
+                print("2222222222222222222")
+
             if "final_process" in self:
-                self["final_process"](normal_dict)
+                self["final_process"](normal_dict, self=self)
             # print("CONVERTED!!!!!!!!!!!", normal_dict)
             return normal_dict
         except:
