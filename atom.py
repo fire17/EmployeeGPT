@@ -316,7 +316,7 @@ You must provide data value for each key in the dict
                                     
                                     func = list(func_result.keys())[0]
                                     # results = func_result["results"]
-                                    self["conversation"].append(f"[ Ace Called Function \"{func}\" Successfully ]")
+                                    self["conversation"].append(f"[ Ace Called Function \"{func}\" Successfully - USE THE NEW RESULTS IN YOUR NEXT RESPONSE! ]")
                                     # self["conversation"].append(f"[DO NOT RECALL {func}]")
                                 # self["conversation"].append(f"")
                                 '''place results in normal_dict for history record'''

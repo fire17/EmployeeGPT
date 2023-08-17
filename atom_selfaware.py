@@ -90,7 +90,7 @@ company_details = {"salesperson_name":"Ace", "salesperson_role":"",
 
 	# "call_results":<List of the call results taken from the Function Call Results section>
 	# "updates":<dict, all the updates for your self own data>
-atom_reflect = '''{objective}
+atom_reflect = '''
 Always answer with a dict format
 It must be correctly injested by json.loads(). No indentations. small letters for booleans true false (not True False) 
 (
@@ -100,28 +100,30 @@ It must be correctly injested by json.loads(). No indentations. small letters fo
 	"thoughts_function_calls":{thought_function_calls}
 	"call":<dict, or list of dicts, each has "func":<func_name>, "args":<List of args>, "kwargs":<dict of kwargs> >
 	"call_results":<List of the call results taken from the Function Call Results section>
-	"response":<str or Markdown, MUST NOT BE EMPY - The final response to the user, always answer in {default}>,
+	"response":<str or Markdown, MUST NOT BE EMPTY - The final response to the user, always answer in {default}>,
 )
 
-
-Function Call Results:
-{function_results}
-
-If ANY results are available, continue responding based on them AND SET thoughts_function_calls TO False!
-If ANY results are available here you MUST include them in "call_results" param of the dict!
-Remeber to adjust your response based on the call results!
-At minimum, include the results in "call_results" AND in your response
 
 Decide about "thoughts_function_calls" based on the current stage of the conversation. It can be allowed again after new input, if relevent.
 
 Available Functions:
 {functions}
 
+
+If ANY NEW results are available, continue responding based on them AND SET thoughts_function_calls TO False!
+If ANY NEW results are available here you MUST include them in "call_results" param of the dict!
+Remember to make your response based on the new call results!
+In your response you DO NOT mention the function call, just address the results or state the answer
+At minimum, include the results in "call_results" AND in your response
+
 The order of the dict must be kept
 You must provide data value for each key in the dict
 
 [Convesation History - minimized ]
 {conversation}
+
+Function Call (NEW) Results:
+{function_results}
 
 [Do not answer directly, just fill the dict appropriately]
 xo: 
