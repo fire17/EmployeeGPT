@@ -89,7 +89,6 @@ def process_calls(response: dict, self=None,*args, **kwargs):
 			traceback.print_exc()    
 	return None
 
-
 def process_stages(response: dict, self=None, *args, **kwargs):
 	if self and "stage" in response:
 		org = response["stage"]
@@ -103,25 +102,31 @@ def process_stages(response: dict, self=None, *args, **kwargs):
 			print(" !!! Processing Stages !!!",stage)
 			if self != None:
 				if stage == "3":
-					print("!!!!!!!!!!! [*Payment Link Sent*]")
-					self["conversation"].append("[*Payment Link Sent*]")
-					# self["conversation"].append("<Stage:4-Awaiting Payment>")
-					self["next_stage"] = "STAGE:4-Awaiting Payment"
-					auto_pay = True
-					if auto_pay:
-						print("!!!!!!!!!!! [*Payment Successful*]")
-						self["conversation"].append("[*Payment Successful*]")
-						self["next_stage"] = "STAGE:5-*Payment Successful*"
-						def foo(*a,**kw):
-							print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-							print("@@@@@@@@@@ will run again @@@@@@@@@@")
-							print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-							time.sleep(2)
-							print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-							print("@@@@@@@@@@@@ Running @@@@@@@@@@@@@@@")
-							print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-							xo.step = 1
-						xo._async(foo)
+				
+					print("!!!!!!!!!!! [*Payment Successful*]")
+					def foo(*a,**kw):
+						self = kw["_self"] if "_self" in kw else None
+						print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+						print("@@@@@@@@@@ will run again @@@@@@@@@@")
+						print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+						time.sleep(2)
+						print("!!!!!!!!!!! [*Payment Link Sent*]")
+						print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+						print("@@@@@@@@@@@@ Running @@@@@@@@@@@@@@@")
+						print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+						if self != None:
+							self["conversation"].append("[*Payment Link Sent*]")
+							# self["conversation"].append("<Stage:4-Awaiting Payment>")
+							self["next_stage"] = "STAGE:4-Awaiting Payment"
+							auto_pay = True
+							if auto_pay:
+								self["conversation"].append("[*Payment Successful*]")
+								self["next_stage"] = "STAGE:5-*Payment Successful*"
+						else:
+							print(f"XXXXXXXX DID NOT GET SELF (foo) XXXXXXXXXX")
+						xo.step = 1
+					xo._async(foo, _self=self)
+					
 def process_missing(response: dict, self=None, *args, **kwargs):
 	if self and "missing_details" in response:
 		missing_details = response["missing_details"]
@@ -146,22 +151,29 @@ def process_cart(response: dict, self=None, *args, **kwargs):
 		# print("##############$$$$$$$$$$$$$")
 		if self is None:
 			self = kwargs["self"] if "self" in kwargs else {}
-		if "new_data" in response and "cart_update_tool" in response["new_data"]:
+		if "cart_update_tool" in response:
 				msg = ""
-				if "details" in response["new_data"]["cart_update_tool"]:
+				if "details" in response["cart_update_tool"]:
 					msg += "Saved Details, "
-					for k in response["new_data"]["cart_update_tool"]["details"]:
-						print("!!! DETAILS !!!", k, response["new_data"]["cart_update_tool"]["details"][k])
+					for k in response["cart_update_tool"]["details"]:
+						print("!!! DETAILS !!!", k, response["cart_update_tool"]["details"][k])
 						if k in customer_details and self and "customer" in self:
-							self["customer"][k] = response["new_data"]["cart_update_tool"]["details"][k]
-							print(f" ::: Customer Details added ::: {k}:{response['new_data']['cart_update_tool']['details'][k]}")
+							target = self["customer"]
+						else:
+							if "current_order" not in self["customer"]:
+								self["customer"]["current_order"] = {}
+							target = self["customer"]["current_order"]
+						v = response["cart_update_tool"]["details"][k]
+						if len(v)>0 and v[0] != "[" and v[0] != "<":
+							target[k] = v
+							print(f" ::: Customer Details added ::: {k}:{response['cart_update_tool']['details'][k]}")
 					if "details" in self:
-						self["details"].update(response["new_data"]["cart_update_tool"]["details"])
+						self["details"].update(response["cart_update_tool"]["details"])
 					# print("!!! DETAILS FINAL !!!", self["details"])
-				if "updates" in response["new_data"]["cart_update_tool"]:
+				if "updates" in response["cart_update_tool"]:
 					msg += "Saved Updates, "
 					if "cart" in self:
-						for k in response["new_data"]["cart_update_tool"]["updates"]:
+						for k in response["cart_update_tool"]["updates"]:
 							print("!!! CART UPDATES !!!", k)
 							self["cart"].append(k)
 				
@@ -233,15 +245,15 @@ Always answer with a dict format
 It must be correctly injested by json.loads(). No indentations. small letters for booleans true false (not True False) 
 (
 	"language_detected":<The Detected Language Name>,
-	"input":<unless you're the first to start, rewrite the LAST inputs by the manager or user, if long use a shortend version with trailing dots...,>,
+	"input":{get_inputs},
 	"call":<dict, or list of dicts, each has "func":<func_name>, "args":<List of args>, "kwargs":<dict of kwargs> >,
 	"call_results":<List of the call results taken from the Function Call Results section>,
 	"notes":("customer_finished_ordering":<When they say "no" (for more items) or they dont want anything else to order. IF TRUE, STOP ASKING THEM IF THEY WANT MORE THINGS, if false, ask them if theres anything else they wish for>,)
 	"explain_stage":<Explain which stage you are now, what are the objectives of this stage, what is the signal to move on from this stage, key things and instructions to remember, how should this stage complete successfully, and what is the next stage or step in the converstion>
 	"next_stage":<"MUST NOT BE EMPTY - The Next Stage assumming the customer will follow what you said, OR THE NEXT STAGE ACCOURDING TO STAGES>,
 	"stage":{next_stage}
+	"response":<str, MUST NEVER BE EMPTY!!! - The final response to the user, always answer in {default}>
 	"missing_details":<List<str> of the next needed details you have not found yet and ARE NOT in the customer's details already, skip this for STAGE:1>
-	"response":<str, MUST NEVER BE EMPTY - The final response to the user, always answer in {default}>
 	"update_cart_or_details":<bool, Always write TRUE when new details have been spotted>,
 	"cart_update_tool":<input to cart_update_tool for when new details have been spotted>,
 	"thoughts_function_calls":{thought_function_calls},
@@ -323,6 +335,9 @@ Remember to ask if there's anything else they'd like to order UNLESS customer_fi
 [Customer Details] Always take these into account when responding
 {customer}
 
+Orders must have: {required_order_details}
+Infer these if possilbe or ask for them
+
 If have all the minimum neccessery details and the customers are done and do not want anything else to order, continue to generate bon
 Customer Done Choosing Order Items: {finished_ordering} 
 
@@ -347,6 +362,7 @@ At minimum, include the results in "call_results" AND in your response
 
 The order of the dict must be kept
 You MUST ALWAYS provide CORRECT data value for each key in the dict
+You MUST ALWAYS RETURN A RESPONSE INSIDE THE DICT
 
 [Convesation History - minimized to show only responses]
 {conversation}
@@ -405,6 +421,63 @@ functions = {"nice":nice,"print":aiprint}
 # You must provide data value for each key in the dict, and for each of the protocols, even if they are unused
 
 # objective="You are an expert in all languages. The user will give you an input, and your job is to detect the language of the user, and then answer them normally."
+
+class hotswap(str):
+	def __init__(self,func=None) -> None:
+		super().__init__()
+		self.self = None
+		self.logic = func
+	def __str__(self):
+		if self.self != None and self.logic != None:
+			print(".................xxxxxxx............")
+			worker = self.self
+			return str(self.logic(worker))
+		return super().__str__()
+	def __repr__(self):
+		return self.__str__()
+	def late_init(self, _self, logic=None):
+		self.self = _self
+		if logic != None:
+			self.logic = logic
+
+def conversation_inputs(worker):
+	conv = worker["conversation"]
+	last_inputs = []
+	notEmployee = True
+	for line in conv[::-1]:
+		if line.startswith(worker["salesperson_name"]+":"):
+			notEmployee = False
+		if notEmployee:
+			print("@@@ ADDED TO INPUTS",line)
+			last_inputs.append(line)
+	print(".................xxxxxxx............")
+	return "\n".join(last_inputs[::-1])
+
+def filter_required_details(worker):
+	# required = worker["required"]
+	required = ["PickupOrDelivery","address","phone"]
+	if "current_order" not in worker["customer"]:
+		worker["customer"]["current_order"] = {}
+	for found in {**worker["customer"],**worker["customer"]["current_order"]}:
+		if found in required and found[0] != "<":
+			print(" $$$ FOUND DETAIL $$$ ",found)
+			required.remove(found)
+	print(" %%% REMAINING FILTERED REQUIRED DETAILS %%% ",required)
+	return ", ".join(required)
+
+
+# i = hotswap("yo")
+# i.late_init({"conversation":["a","b","ak: hello", "c", "<d>"],"salesperson_name":"ak"},logic = lambda a: "VVVVVVVVVVVVVVVV"+str(a))
+
+
+required_order_details = hotswap("<!!!required_order_details!!!>")
+
+
+get_inputs = hotswap("<unless you're the first to start, rewrite the LAST inputs by the manager or user, if long use a shortend version with trailing dots...,>")
+# get_inputs
+
+# get_inputs
+
 conversation1 = []
 missing_details = []
 details = {"PickupOrDelivery":"[missing]","address":"?","pickup_time":"<only needed for pickups>","phone":"<not yet provided>","delivery_notes":"","customer_finished_ordering":False}
@@ -423,7 +496,8 @@ def special_format(ai_message, worker):
 		return ai_message['response']
 	return ai_message
 	
-data = dict(next_stage="STAGE:1-Introduction",
+data = dict(get_inputs = get_inputs,
+			next_stage="STAGE:1-Introduction",
 	    	special_format=special_format,
 		    customer_name = "Tami",
 			finished_ordering=finished_ordering,
@@ -432,12 +506,16 @@ data = dict(next_stage="STAGE:1-Introduction",
 			cart = cart, conversation=conversation1,
 			default="English",
 			triggers={"updates":process_updates, "call":process_calls, "stage":process_stages,
-	     			 "language_detected":process_lang_detection, "new_data":process_cart,
-					  "missing_details":process_missing, "notes":process_notes}
+	     			 "language_detected":process_lang_detection, "cart_update_tool":process_cart,
+					  "missing_details":process_missing, "notes":process_notes},
+			required_order_details = required_order_details
 			)
 # languageFinder = Worker(lang_detect_and_respond_with_tools2, objective=objective, conversation=conversation1, default="English", triggers={"language_detected":process_detection} )
 # languageFinder = Worker(employee_with_tools,prev_employee=employeePrompt, conversation=conversation1, default="English", triggers={"language_detected":process_detection} )
 atomEmployee = Worker(atom_employee_funcs, **{**data, **company_details} )
+get_inputs.late_init(atomEmployee, logic=conversation_inputs)
+required_order_details.late_init(atomEmployee, logic = filter_required_details)
+
 xo.manager = -1
 xo.manager.step = -1
 xo.step = -1
