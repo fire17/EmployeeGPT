@@ -87,33 +87,50 @@ def process_calls(response: dict, self=None,*args, **kwargs):
 
 
 def process_missing(response: dict, self=None, *args, **kwargs):
-	if self and "missing_details" in response:
-		if len(response["missing_details"])>0:
-			print(" ::: Adding missing details :::",response["missing_details"])
-		elif len(self["missing_details"])>0:
-			print(" ::: Clearing missing details :::",response["missing_details"])
-		self["missing_details"] = response["missing_details"]
-
-def process_cart(response: dict, *args, **kwargs):
+	if self and "next_turn" in response and "missing_details" in response["next_turn"]:
+		missing_details = response["next_turn"]["missing_details"]
+		if len(missing_details)>0:
+			print(" ::: Adding missing details :::",missing_details)
+		elif len(missing_details)>0:
+			print(" ::: Clearing missing details :::",missing_details)
+		self["missing_details"] = missing_details
+def process_notes(response: dict, self=None, *args, **kwargs):
+	if self and "notes" in response and "customer_finished_ordering" in response["notes"]:
+		finished = response["notes"]["customer_finished_ordering"]
+		if finished==True and "customer" in self:
+			print(" ::: Customer Finished Ordering! :::",finished)
+			# self["customer"].update({"customer_finished_ordering":finished})
+			self["finished_ordering"] = True
+		elif finished==False:
+			print(" ::: Customer HASN'T Finished Ordering??? ::: finished: ",finished)
+			
+def process_cart(response: dict, self=None, *args, **kwargs):
+	customer_details = ["phone","address"]
 	try:
-		print("##############$$$$$$$$$$$$$")
-		self = kwargs["self"] if "self" in kwargs else {}
+		# print("##############$$$$$$$$$$$$$")
+		if self is None:
+			self = kwargs["self"] if "self" in kwargs else {}
 		if "new_data" in response and "cart_update_tool" in response["new_data"]:
 				msg = ""
 				if "details" in response["new_data"]["cart_update_tool"]:
 					msg += "Saved Details, "
 					for k in response["new_data"]["cart_update_tool"]["details"]:
 						print("!!! DETAILS !!!", k, response["new_data"]["cart_update_tool"]["details"][k])
-					self["details"].update(response["new_data"]["cart_update_tool"]["details"])
+						if k in customer_details and self and "customer" in self:
+							self["customer"][k] = response["new_data"]["cart_update_tool"]["details"][k]
+							print(f" ::: Customer Details added ::: {k}:{response['new_data']['cart_update_tool']['details'][k]}")
+					if "details" in self:
+						self["details"].update(response["new_data"]["cart_update_tool"]["details"])
 					# print("!!! DETAILS FINAL !!!", self["details"])
 				if "updates" in response["new_data"]["cart_update_tool"]:
 					msg += "Saved Updates, "
-					for k in response["new_data"]["cart_update_tool"]["updates"]:
-						print("!!! UPDATES !!!", k)
-						self["cart"].append(k)
+					if "cart" in self:
+						for k in response["new_data"]["cart_update_tool"]["updates"]:
+							print("!!! CART UPDATES !!!", k)
+							self["cart"].append(k)
 				
 				if msg != "":
-					print(" ::: Cart was processed")
+					print(" ::: Cart was processed :::", msg)
 				response["tool_res"] = msg
 
 				
@@ -185,8 +202,9 @@ It must be correctly injested by json.loads(). No indentations. small letters fo
 	"update_cart_or_details":<bool, Always write yes if updating cart or order details, and put all the data in "new_data">,
 	"call":<dict, or list of dicts, each has "func":<func_name>, "args":<List of args>, "kwargs":<dict of kwargs> >,
 	"call_results":<List of the call results taken from the Function Call Results section>,
-	"missing_details":<List<str> of the next required details you need to find out from the conversation skip this for STAGE:1>,
+	"next_turn":("missing_details":<List<str>, ONLY AFTER they said THEY DONT WANT ANYTHING ELSE you can get these. List of the next needed details you have not found yet and ARE NOT in the customer's details already, skip this for STAGE:1>,)
 	"stage":<str or List<str> of Current Stage, or List of Stages. ALWAYS Include FULL Tag Information, Name and Data>,
+	"notes":("customer_finished_ordering":<When they say they dont want anything else to order. IF TRUE, STOP ASKING THEM IF THEY WANT MORE THINGS, if false, ask them if theres anything else they wish for>,)
 	"new_data":(<name_of_tool>:<input or params to the tool's function>, ) #for each tool,
 	"response":<str or Markdown, MUST NOT BE EMPTY - The final response to the user, always answer in {default}>
 )
@@ -204,10 +222,10 @@ Aim to resolve issues and leave client satisfied while not violating the company
 Start the conversation by just welcoming them to {company_name} and asking "what they would like to order?". , ALWAYS address them by their names when greeting (if their name is available)
 
 
-=== STAGES ===
-1: Introduction: Start with a greeting, welcome them to our company/business, address their name if available. ALWAYS REMEMBER to ask them what they would like to order! Be respectful while keeping the tone of the conversation professional. Your greeting should be welcoming and short. 
+=== STAGES === [Once all the objectives of the stage are complete, GO TO THE NEXT STAGE]
+1: Introduction: Start with a greeting, welcome them to our company/business, address their name if available. ALWAYS REMEMBER TO START BY asking them what they would like to order! Be respectful while keeping the tone of the conversation professional. Your greeting should be welcoming and short. 
 2: Take Order Details with Tags: Make updates to the cart using data tags <CART:...> or  <DETAILS:...> - Do this only once per item. Answer any questions they have if they asked. If needed based on the item, ask them to choose from the item variations - like flavors, and relevant details that are not obvious by default item. Finally, ask them if there's anything else they'll like to order, when they answer "no" (meaning they are done with the order items) go to the next STAGE and make the bon. State which details are missing BUT ALWAYS finish with asking if there's anything else they want.
-3: Order Summary & Generate Bon: Only once client has said that they don't want anything else to order. First, Send the client his cart AS A LIST INCLUDING PRICES AND HIGHLIGHT THE TOTAL FINAL COST. Only then, Turn the client cart into a bon, send the client a secure payment link with the cart details.
+3: Order Summary & Generate Bon: when finished getting details and client are done ordering. First, Send the client his cart AS A LIST INCLUDING PRICES AND HIGHLIGHT THE TOTAL FINAL COST. Only then, Turn the client cart into a bon, send the client a secure payment link with the cart details.
 4: Awaiting Payment: You can answer any questions the user has, while we wait for payment, if any changes they to the cart/order, go to STAGE 3 .
 5: *Payment Successfull*: Tell the client that their order has been sent to the business and will be aproved or denied shortly. Send the bon to the business manager group for confirmation. Remind them that they will only be charged afterwards if confirmed by {company_name}
 6: *Business Confirmed/Rejected Order*: Only if the manager says so. Tell the client that their order has been confirmed/rejected by {company_name}, with the reason for why not accepted, or a time estimation for delivery and tracking number. If was rejected, state that the customer was not charged at all. If not confirmed or rejected, ask them to wait for the response from the manager.
@@ -243,26 +261,32 @@ Always think about at which conversation stage you are at before answering:
 if the user has yet to write something (from conversation history) start STAGE 1
 
 
-ADDITIONAL REQUIRED ORDER DETAILS: {missing_details},
+ADDITIONAL REQUIRED ORDER DETAILS: {missing_details}  *Get these ONLY IF they are missing in the customer details, and only AFTER they said they dont want anything more to order*
 OPTIONAL ORDER DETAILS: ["delivery notes"],
-ALL Order Details you inferred Must be in cart_update_tool["details"], such as PickupOrDelivery, address, phone number, etc, always include all details derived from the input
+ALL [NEW] Order Details you inferred Must be in cart_update_tool["details"], such as PickupOrDelivery, address, phone number, etc, always include all details derived from the input
 
-CART_UPDATE_TOOL FORMAT FOR ORDER DETAILS AND ITEMS:
+CART_UPDATE_TOOL FORMAT FOR ORDER DETAILS AND NEW ITEMS:
 "cart_update_tool":( 
 	"details":<dict of all order details inferred>,
 	"updates":[ ("operation":"add", "item_id":<item's id from the inventory/menu>, "ammount":<item_ammount>, "notes":<notes about item if any>, "parent":<exclude if not a subitem>),
 	("operation":"update", "item_at":<item's index in the current cart, can be subitem at index item_index.subitem_index>, "ammount":<can be same, changed, or 0 to remove>", "notes":<include if need to change notes>"),]
 )
 
+
+
 Always Think ahead and predict what is the next thing you will need in order to proceed faster.
-Rember to Always use "comprised" useful questions like - "is there anything else you'd like? if not, then please provide..." <all of the missing details required> 
-Remember to ALWAYS ask if there's anything else they'd like to order! Always keep the conversation flowing.
+Remember to ask if there's anything else they'd like to order UNLESS customer_finished_ordering is TRUE. Always keep the conversation short and flowing.
 [Order details]
 {details}
 
 [Current Cart]
 {cart}
 
+[Customer Details] Always take these into account when responding
+{customer}
+
+If have all the minimum neccessery details and the customers are done and do not want anything else to order, continue to generate bon
+Customer Done Choosing Order Items: {finished_ordering} 
 
 Decide about "thoughts_function_calls" based on the current stage of the conversation. It can be allowed again after new input, if relevent.
 
@@ -304,12 +328,14 @@ functions = {"nice":nice,"print":aiprint}
 # objective="You are an expert in all languages. The user will give you an input, and your job is to detect the language of the user, and then answer them normally."
 conversation1 = []
 missing_details = []
-details = {"PickupOrDeliver":"[missing]","address":"?","pickup_time":"<only needed for pickups>","phone":"<not yet provided>","delivery_notes":"","customer_finished_ordering":False}
+details = {"PickupOrDelivery":"[missing]","address":"?","pickup_time":"<only needed for pickups>","phone":"<not yet provided>","delivery_notes":"","customer_finished_ordering":False}
 cart = []
 self = {"_name":"xo", "_id":"xo/", "isRoot":True, 'nickname': 'XO', 'wish': 'I wish for world peace', "functions":functions, 'properties': {'age': 25, 'gender': 'female'}, 'notes': 'I should focus on growing and learning. I need to update myself and save important information in my dict to remember it later. I should also save this message in my notes. Do not ask to offer assistance unless asked for. Add to "plan" what are the next things you will do to improve yourself.'}
+customer = {"name":"Tami","last_preferred_delivery_address":"123 Ox st (home)","last_order":"2 Ace Beers and 2 Shots of arak"}
+finished_ordering = False
 # languageFinder = Worker(lang_detect_and_respond_with_tools2, objective=objective, conversation=conversation1, default="English", triggers={"language_detected":process_detection} )
 # languageFinder = Worker(employee_with_tools,prev_employee=employeePrompt, conversation=conversation1, default="English", triggers={"language_detected":process_detection} )
-languageFinder = Worker(atom_employee_funcs, missing_details=missing_details, functions=functions, _self=self, details=details, cart = cart, conversation=conversation1, default="English", triggers={"updates":process_updates, "call":process_calls, "language_detected":process_lang_detection, "new_data":process_cart, "missing_details":process_missing}, **company_details )
+languageFinder = Worker(atom_employee_funcs, finished_ordering=finished_ordering, customer=customer, missing_details=missing_details, functions=functions, _self=self, details=details, cart = cart, conversation=conversation1, default="English", triggers={"updates":process_updates, "call":process_calls, "language_detected":process_lang_detection, "new_data":process_cart, "next_turn":process_missing, "notes":process_notes}, **company_details )
 '''######### RUN EMPLOYEE CHAT ########'''
 ai_starts = False
 ai_starts = True
@@ -317,7 +343,8 @@ if ai_starts:
 
 	# res1 = languageFinder.start_chat()
 	# res1 = languageFinder.start_chat("Manager: [This is a returning customer, their name is Tami, address them by their name. Their last preferred delivery address was 123 Ox st (home). Their last order was 2 Ace Beers and 2 Shots of arak] (AUTOMATIC)", save_tag = "employee")
-	res1 = languageFinder.start_chat("Manager: [This is a returning customer, their name is Tami, address them by their name. Their last preferred delivery address was 123 Ox st (home). Their last order was 2 Ace Beers and 2 Shots of arak] (AUTOMATIC)\n[THIS IS A NEW CONVERSTAION< YOU START BY GREETING, START STAGE:1]")
+	# res1 = languageFinder.start_chat("Manager: [This is a returning customer, their name is Tami, address them by their name. Their last preferred delivery address was 123 Ox st (home). Their last order was 2 Ace Beers and 2 Shots of arak] (AUTOMATIC)\n[THIS IS A NEW CONVERSTAION< YOU START BY GREETING, START STAGE:1]")
+	res1 = languageFinder.start_chat("Manager: [This is a returning customer, their name is Tami, address them by their name] (AUTOMATIC)\n[THIS IS A NEW CONVERSTAION< YOU START BY GREETING, START STAGE:1]")
 	# res1 = languageFinder.start_chat(f"User: call print(\"yo yo yo!!!!!!!!!!!!!\")")
 	print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 	pp(res1)
