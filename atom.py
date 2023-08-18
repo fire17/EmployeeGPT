@@ -124,7 +124,18 @@ import json
 import re
 
 class Worker(dict):
+    def restart(self, *args, **kwargs):
+        original = self["__original__"]
+        print(" :::::::::::::::::::::::::::::::::::::::::::: ")
+        print(" :::::::::::::::::::::::::::::::::::::::::::: ")
+        print(" :::::::::::::::::::::::::::::::::::::::::::: ")
+        print("\n"*4)
+        print(" ::: STARTING NEW WORKER :::\n",original[2])
+        print(" :::::::::::::::::::::::::::::::::::::::::::: ")
+        return type(self)(original[0],*original[1],**original[2])
     def __init__(self, template,*args, **kwargs):
+        self["__original__"] = [template, args, kwargs]
+
         self["objective"]="You are the most Capable Expert in any field, and you can determin the objective based on the structure of provided by the system below."
         for key in kwargs:
             self[key] = kwargs[key]
@@ -170,20 +181,16 @@ You must provide data value for each key in the dict
         self["_params"] = _params
 
     
-    def start_chat(self,incoming=None, save_tag=None, *args, **kwargs):
+    def start_chat(self,incoming=None, save_tag="response", *args, **kwargs):
         if incoming != None:
             incoming = incoming if len(incoming) > 0 else " "
             self["conversation"].append(incoming)
         ai_message = self.run()
         # self["conversation"].pop()
         raw_output = ai_message
-        agent_name = "{salesperson_name}"
-        if save_tag != None and isinstance(ai_message,dict):
-            ai_message = {f"{save_tag}":ai_message[save_tag]}
-        ai_message_record = agent_name + ": " + ai_message if not isinstance(ai_message, dict) else agent_name + ": " +json.dumps(ai_message)
-        # if '<END_OF_TURN>' not in ai_message_record:
-        #     ai_message_record += ' <END_OF_TURN>'
-        self["conversation"].append(ai_message_record)
+        # agent_name = "{salesperson_name}"
+        agent_name = self["salesperson_name"] if "salesperson_name" in self else "Employee: "
+        self.save_ai_message(ai_message, agent_name=agent_name, save_tag=save_tag, *args, **kwargs)
         # print("@@@@@@@@@@",ai_message_record)
         # print("########## ai_message:",type(ai_message))
         # print("XXXXXXXXXXXXXxx")
@@ -196,28 +203,22 @@ You must provide data value for each key in the dict
                 pass #  print("$$$$$$$$$", ai_message["responses"])
             return raw_output
         '''maybe retry a couple of times...?'''
+        return raw_output
         return ai_message_record
 
 
     
-    def chat(self, incoming, save_tag = None, *args, **kwargs):
+    def chat(self, incoming, save_tag = "response", *args, **kwargs):
         incoming = incoming if len(incoming) > 0 else " "
-        self["conversation"].append("User: "+incoming)
+        end = " <END_OF_TURN>"
+        username = "User" if "customer_name" not in self else self["customer_name"]
+        self["conversation"].append(f"{username}: "+incoming+end)
         ai_message = self.run()
         # self["conversation"].pop()
         raw_output = ai_message
-        agent_name = "{salesperson_name}"
-        if save_tag != None and isinstance(ai_message,dict):
-            ai_message = {f"{save_tag}":ai_message[save_tag]}
-        ai_message_record = agent_name + ": " + ai_message if not isinstance(ai_message, dict) else agent_name + ": " +json.dumps(ai_message)
-        # if '<END_OF_TURN>' not in ai_message_record:
-        #     ai_message_record += ' <END_OF_TURN>'
-        self["conversation"].append(ai_message_record)
-        # print("@@@@@@@@@@ on record:",ai_message_record)
-        # print("########## ai_message:",type(ai_message))
-        # print("XXXXXXXXXXXXXxx")
-        # print(raw_output)
-        # print("XXXXXXXXXXXXXxx")
+        # agent_name = "{salesperson_name}"
+        agent_name = self["salesperson_name"] if "salesperson_name" in self else "Employee: "
+        self.save_ai_message(ai_message, agent_name=agent_name, save_tag=save_tag, *args, **kwargs)
         if isinstance(ai_message, dict):
             if "response" in ai_message:
                 pass # print("$$$$$$$$$", ai_message["response"])
@@ -225,6 +226,7 @@ You must provide data value for each key in the dict
                 pass # print("$$$$$$$$$", ai_message["responses"])
             return raw_output
         '''maybe retry a couple of times...?'''
+        return raw_output 
         return ai_message_record 
         # ai_message = worker.run(foo="17", bar = "10", conversation="\n".join(conversation))
         # ai_message = worker.run(conversation="\n".join(conversation))
@@ -247,6 +249,40 @@ You must provide data value for each key in the dict
             ai_message += ' <END_OF_TURN>'
         conversation.append(ai_message)
         print("@@@@@@@@@@",ai_message)
+    def save_ai_message(self, ai_message, agent_name="Employee", save_tag=None, *args, **kwargs):
+        if "special_format" in self:
+            ai_message_record = self["special_format"](ai_message, self)
+            ai_message_record = agent_name + ": " + ai_message_record
+        else:
+            if save_tag != None and isinstance(ai_message,dict):
+                ai_message = {f"{save_tag}":ai_message[save_tag]}
+                ai_message = ai_message[save_tag]
+            ai_message_record = agent_name + ": " + ai_message if not isinstance(ai_message, dict) else agent_name + ": " +json.dumps(ai_message)
+        if '<END_OF_TURN>' not in ai_message_record:
+            ai_message_record += ' <END_OF_TURN>'
+        self["conversation"].append(ai_message_record)
+
+    def step(self,msg=None, save_tag=None, *args, **kwargs):
+        print(" ::: STEPPING ::: ",)
+        if msg != None:
+            self["conversation"].append(str(msg))
+        ai_message = self.run()
+        raw_output = ai_message
+        agent_name = self["salesperson_name"] if "salesperson_name" in self else "Employee: "
+        self.save_ai_message(ai_message, agent_name=agent_name, save_tag=save_tag, *args, **kwargs)
+        if isinstance(ai_message, dict):
+            return raw_output
+        '''maybe retry a couple of times...?'''
+        return ai_message_record
+    
+    def manager_msg(self,manager_msg, *args, **kwargs):
+        print(" ::: MANAGER MESSAGE ::: ",f"Manager: {manager_msg}")
+        self["conversation"].append(f"Manager: {manager_msg}")
+
+    def manager_step(self,manager_msg, *args, **kwargs):
+        print(" ::: MANAGER STEP ::: ",f"Manager: {manager_msg}")
+        self["conversation"].append(f"Manager: {manager_msg}")
+        return self.step()
 
     def run(self, can_trigger = True, iteration = 0):
         prep_params = {}
@@ -292,6 +328,10 @@ You must provide data value for each key in the dict
             # print("&&&&&&&&&&&&&&&&&&&")
             # pp(normal_dict)
             if "triggers" in self and can_trigger and (iteration==0 or "thoughts_function_calls" in normal_dict and normal_dict["thoughts_function_calls"]==True):
+                saveToSelf = True
+                if saveToSelf:
+                    for key in normal_dict:
+                        self[key] = normal_dict[key]
                 for key in self["triggers"]:
                     if key in normal_dict:
             # if "triggers" in self:
