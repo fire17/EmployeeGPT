@@ -3,7 +3,9 @@ import traceback
 from xo.redis import xoRedis
 
 print("xxx")
-xo = xoRedis("atom",host='ethical-monarch-46113.upstash.io',port=46113,password='7a984cbd2d4b408e8d84c4c44deea3c5',ssl=True)
+# xo = xoRedis("atom",host='ethical-monarch-46113.upstash.io',port=46113,password='7a984cbd2d4b408e8d84c4c44deea3c5',ssl=True)
+# xo = xoRedis("atom",host='ethical-monarch-46113.upstash.io',port=46113,password='7a984cbd2d4b408e8d84c4c44deea3c5',ssl=True)
+xo=xoRedis("atom_employee", port=6379)
 
 from langchain import LLMChain, PromptTemplate
 # from langchain.llms import BaseLLM
@@ -174,7 +176,14 @@ You must provide data value for each key in the dict
 
         def makeWorker(promptTemplate):
             prompt, params = dynamicPrompt(promptTemplate)
-            worker = LLMChain(prompt=prompt,llm=llm, verbose=verbose)
+            def handle_verbose(verbose_output, *args, **kwargs):
+                pass
+                # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+                # print("$$$$$$$ HANDLEING VERBOSE OUTPUT $$$$$$")
+                # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+                # print(verbose_output) # Handle verbose here
+                # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$", args, kwargs)
+            worker = LLMChain(prompt=prompt,llm=llm, verbose=verbose, verbose_hook=handle_verbose)
             return worker, params
         _worker, _params = makeWorker(template)
         self["_worker"] = _worker

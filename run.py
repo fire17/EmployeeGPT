@@ -10,7 +10,9 @@ from langchain.chat_models import ChatOpenAI
 
 from xo.redis import xoRedis
 
-xo = xoRedis("test.engineergpt")
+# xo = xoRedis("test.engineergpt")
+# xo = xoRedis("test.engineergpt", host='wise-coyote-46085.upstash.io', port=46085, password='7fdf57fde49e4eadb7a260d0e38230a2', ssl=True )
+xo = xoRedis("test.engineergpt",host='ethical-monarch-46113.upstash.io',port=46113,password='7a984cbd2d4b408e8d84c4c44deea3c5',ssl=True)
 # Tool_master = False   
 debug_master=False
 

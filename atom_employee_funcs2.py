@@ -549,7 +549,7 @@ def handleStep(msg=None,*args,**kwargs):
 	print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 	if msg != None and msg != -1:
 		print("XXXXXXXXXXXXXXXXXXXX",msg)
-		ai_message = atomEmployee.step(msg)
+		ai_message = atomEmployee.step()
 		if isinstance(ai_message,dict):
 			print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 			pp(res1)
@@ -560,9 +560,13 @@ def handleStep(msg=None,*args,**kwargs):
 			print(f"{company_details['salesperson_name']}: {ai_message}")
 		print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 		
-xo.manager @= lambda msg, *args, **kwargs: handleManager(msg)
-xo.manager.step @= lambda msg, *args, **kwargs: handleManager(msg, step=True)
-xo.step @= lambda msg, *args, **kwargs: handleStep()
+xo.manager @= lambda msg, *args, **kwargs: handleManager(msg, **kwargs)
+xo.manager.step @= lambda msg, *args, **kwargs: handleManager(msg, step=True, **kwargs)
+xo.step @= lambda msg, *args, **kwargs: handleStep(msg, **kwargs)
+
+# xo.manager = -1
+# xo.manager.step = -1
+# xo.step = -1
 
 '''######### RUN EMPLOYEE CHAT ########'''
 ai_starts = False

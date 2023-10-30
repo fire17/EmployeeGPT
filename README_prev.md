@@ -1,9 +1,9 @@
-# :robot: EmployeeGPT - Your Context-Aware AI Business Employee
+# :robot: SalesGPT - Your Context-Aware AI Sales Assistant
 
-This repo demonstrates an implementation of a **context-aware** AI Business Employee using LLMs.
+This repo demonstrates an implementation of a **context-aware** AI Sales Assistant using LLMs.
 
-EmployeeGPT is context-aware, which means it can understand what section of a sales conversation it is in and act accordingly.
-Morever, EmployeeGPT has access to tools, such as your own pre-defined product knowledge base, significantly reducing hallucinations!
+SalesGPT is context-aware, which means it can understand what section of a sales conversation it is in and act accordingly.
+Morever, SalesGPT has access to tools, such as your own pre-defined product knowledge base, significantly reducing hallucinations!
 
 We leverage the [`langchain`](https://github.com/hwchase17/langchain) library in this implementation, specifically [Custom Agent Configuration](https://langchain-langchain.vercel.app/docs/modules/agents/how_to/custom_agent_with_tool_retrieval) and are inspired by [BabyAGI](https://github.com/yoheinakajima/babyagi) architecture.
 
@@ -155,18 +155,26 @@ For questions, you can [contact the repo author](mailto:filipmichalsky@gmail.com
 Follow me at [@FilipMichalsky](https://twitter.com/FilipMichalsky)
 
 
-## EmployeeGPT TODO & Roadmap
-
-- [] Add items from Menu/Catalog
-- [] SmartEmployee - reflections, etc
-- [] Generate real bon
-- [] works in generic chat (web, )
-- [] works in telegram
-- [] works in wa
-- [] fine tuning
-- [] self-tuning
+## SalesGPT Roadmap
 
 
+
+
+- [high priority] Improve reliability of the parser [issue here](https://github.com/filip-michalsky/SalesGPT/issues/26) and [here](https://github.com/filip-michalsky/SalesGPT/issues/25)
+- Add example implementation of OpenAI functions agent[issue here](https://github.com/filip-michalsky/SalesGPT/issues/17)
+- Add support for multiple tools [issue here](https://github.com/filip-michalsky/SalesGPT/issues/10)
+- Add an agent controller for whne stages need to be traversed linearly without skips [issue here](https://github.com/filip-michalsky/SalesGPT/issues/19)
+- Add `too_getter` to choose a tool based on vector distance to the taks needed to be done
+- What tools should the agent have? (e.g., the ability to search the internet)
+- Add the ability of Sales Agent to interact with AI plugins on your website (.well-known/ai-plugin.json)
+~~-
+ Add the ability to stop generation when user interupts the agent~~
+
+~~- Add a vectorstore to incorporate a real product knowledge base vs. the LLM making it up.~~
+
+~~- Knowledge base for products/services a Sales Agent can offer (so that LLM does not make it up)~~
+
+~~- Convert LLM Chains (linear workflow) to an Agent (decides what to do based on user's input)~~
 
 
 
