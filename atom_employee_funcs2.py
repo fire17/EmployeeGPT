@@ -370,6 +370,19 @@ You MUST ALWAYS provide CORRECT data value for each key in the dict
 {conversation}
 <{next_stage}>
 
+# ES: {{"escaped":"dict"}}
+# xxx: {xxx}
+# xxx.a: {xxx.a}
+# xxx.a.b.c: {xxx.a.b.c}
+# xxx.a.b.c.Empty: {xxx.a.b.c.e}
+# XO.atom.a.b.c.Empty: {xo.atom.a.b.c.e}
+# XO.atom: {xo.atom}
+# XO.atom.a.b.c: {xo.atom.a.b.c}
+# XO: {xo}
+# XO.atom: {xo.atom}
+# XO.atom.a.b.c: {xo.atom.a.b.c}
+# XO.atom.a.b.c.value: {xo.atom.a.b.c.value}
+
 [Do not answer directly, just fill the dict appropriately]
 {salesperson_name}: 
 '''
@@ -474,6 +487,14 @@ def filter_required_details(worker):
 
 required_order_details = hotswap("<!!!required_order_details!!!>")
 
+xo.atom.a.b.c = 123123123
+xo.atom.a.b.c = 123123123123123
+
+while xo.atom.a.b.c.value != 123123123123123:
+	print("awaiting atom")
+	xo.atom.a.b.c = 123123123123123
+	xo.atom.a.b.c._setValue(123123123123123)
+	time.sleep(0.1)
 
 get_inputs = hotswap("<unless you're the first to start, rewrite the LAST inputs by the manager or user, if long use a shortend version with trailing dots...,>")
 # get_inputs
@@ -510,7 +531,9 @@ data = dict(get_inputs = get_inputs,
 			triggers={"updates":process_updates, "call":process_calls, "stage":process_stages,
 	     			 "language_detected":process_lang_detection, "cart_update_tool":process_cart,
 					  "missing_details":process_missing, "notes":process_notes},
-			required_order_details = required_order_details
+			required_order_details = required_order_details,
+			xxx = {"a":{"b":{"c":11111111111}}},
+			xo = xo,
 			)
 # languageFinder = Worker(lang_detect_and_respond_with_tools2, objective=objective, conversation=conversation1, default="English", triggers={"language_detected":process_detection} )
 # languageFinder = Worker(employee_with_tools,prev_employee=employeePrompt, conversation=conversation1, default="English", triggers={"language_detected":process_detection} )

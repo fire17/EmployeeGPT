@@ -1,6 +1,6 @@
 from pprint import pprint as pp
 import traceback
-from xo.redis import xoRedis
+from xo.redis import xoRedis, Expando
 
 print("xxx")
 # xo = xoRedis("atom",host='ethical-monarch-46113.upstash.io',port=46113,password='7a984cbd2d4b408e8d84c4c44deea3c5',ssl=True)
@@ -107,14 +107,60 @@ def extract_named_parameters2(s):
     pattern = r'\(([^}]+)\)'
     matches = re.findall(pattern, s)
     return matches
-def extract_named_parameters3(s):
+def extract_named_parameters_good(s):
     pattern = r'\{([^{}]+)\}'
     matches = re.findall(pattern, s)
     return matches
 
-def dynamicPrompt(prompt):
+def extract_named_parameters3(s, n = 1):
+    pattern = r'\{([^{}]*)\}(?![^{]*\})' if n == 1 else r'\{([^{}]*(?:\{[^{}]*\}[^{}]*){%d})\}' % (n - 1)
+    matches = re.findall(pattern, s)
+    return matches
+
+# result = extract_named_parameters("some text {get_this}  {{ignore_this}} {{{ignore_this_also}}}", n=1)
+# print(result)  # Output: ['get_this']
+
+# result = extract_named_parameters("some text {get_this}  {{ignore_this}} {{{ignore_this_also}}}", n=2)
+# print(result)  # Output: ['ignore_this']
+
+# result = extract_named_parameters("some text {get_this}  {{ignore_this}} {{{ignore_this_also}}}", n=3)
+# print(result)  # Output: ['ignore_this_also']
+
+
+def dynamicPrompt(prompt, obj = None):
     params = extract_named_parameters3(prompt)
-    # print("DDD params:",params)
+    print("DDD params:",params)
+    replace = []
+    remove = []
+    if obj is not None:
+        for p in params:
+            if "\"" in p:
+                print("removing ", p)
+                remove.append(p)
+                # params.remove(p)
+            if "." in p:
+                head = p.split(".")[0] 
+                if head in obj:
+                    tail = ".".join(p.split(".")[1:])
+                    res = ("{"+tail+"}").format(**Expando().fill(obj[head]))
+                    if res == "{}":
+                        # res = "{{}}"
+                        pass
+                    res = res.replace("{","{{")
+                    res = res.replace("}","}}")
+                    # elif res[0] == "{" and res[-1] == "}":
+                    #     res = "{"+res+"}"
+                    replace.append(( p, res ))
+                    # if tail in obj[head]:
+                        # replace.append((p,obj[head][tail]))
+                # params.append(p.split(".")[0])
+    for r in remove:
+        pass
+        # params.remove(r)
+    print("RRR replaces", replace)
+    for p,r in replace:
+        prompt = prompt.replace("{"+p+"}",r)
+        params.remove(p)
     return PromptTemplate(template=prompt, input_variables=params,), params
 
 
@@ -174,8 +220,8 @@ You must provide data value for each key in the dict
 {salesperson_name}:'''
             template = primer1+outputs_primer+closer
 
-        def makeWorker(promptTemplate):
-            prompt, params = dynamicPrompt(promptTemplate)
+        def makeWorker(promptTemplate, obj):
+            prompt, params = dynamicPrompt(promptTemplate, obj)
             def handle_verbose(verbose_output, *args, **kwargs):
                 pass
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
@@ -185,7 +231,7 @@ You must provide data value for each key in the dict
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$", args, kwargs)
             worker = LLMChain(prompt=prompt,llm=llm, verbose=verbose, verbose_hook=handle_verbose)
             return worker, params
-        _worker, _params = makeWorker(template)
+        _worker, _params = makeWorker(template, self)
         self["_worker"] = _worker
         self["_params"] = _params
 
